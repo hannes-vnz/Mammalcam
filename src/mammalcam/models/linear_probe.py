@@ -8,7 +8,7 @@ from sklearn.metrics import f1_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-C_GRID = (0.01, 0.1, 1.0)
+C_GRID = (0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 1.0)
 
 
 def fit(x_train, y_train, x_val, y_val, c_grid=C_GRID, seed: int = 0):

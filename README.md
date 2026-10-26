@@ -77,6 +77,20 @@ To avoid 16 hours of local inference, the crops use [LILA's precomputed MegaDete
 - **12 % of the animal images give no crop.** Most are burst frames after the animal has left; for rodents it is 33 %, because small animals are detected less often.
 - **Hard cases for the classifier:** rodents have 101 training crops but 417 test crops, dogs only 41 validation crops. Fox (1 training crop) and badger (16) are too rare to train on.
 
+### Baseline: full images, no detector
+
+12 classes ([configs/classes_cct20.json](configs/classes_cct20.json)), 51,129 images with exactly one of them. Frozen `convnext_tiny.fb_in22k` embeddings of the whole image (resized to 224 × 224) plus logistic regression. The same embeddings are used for every split, so the differences come from the split alone. Details: [reports/04_baseline.md](reports/04_baseline.md).
+
+| Split | Test images | Accuracy | Macro-F1 |
+|---|---|---|---|
+| **by camera** (unseen cameras) | 12,407 | **0.49** | **0.43** |
+| random by burst | 12,980 | 0.77 | 0.77 |
+| random by image | 12,998 | 0.81 | 0.81 |
+
+**A random split would overstate accuracy by about 32 points.** Most of the gap (28 points) comes from seeing the same cameras in training and test; near-identical burst frames add another 4. On a new camera the whole-image model fails badly: all 636 rodent test images come from camera 33, and 496 of them are classified as raccoon.
+
+The number also depends a lot on which cameras end up in the test set. Accuracy per test camera ranges from 0.34 to 0.87, and macro-F1 is 0.24 on the 3 validation cameras but 0.43 on the 5 test cameras. A single split of 20 cameras is not enough for a stable estimate, so the next results will use cross-validation over camera groups.
+
 ## Limitations
 
 Pending.
