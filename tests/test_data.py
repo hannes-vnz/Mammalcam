@@ -125,3 +125,27 @@ def test_cct20_location_split_from_config():
     assert len(locs) == len(set(locs)) == img.location.nunique()
     assign = {loc: part for part in SPLITS for loc in cfg["locations"][part]}
     assert location_split(img, seed=cfg["seed"], val_frac=cfg["val_frac"], test_frac=cfg["test_frac"]) == assign
+
+
+# --- camera cross-validation ------------------------------------------------
+
+def test_camera_folds_test_every_camera_once_and_keep_classes_in_train(synthetic):
+    from mammalcam.data.split import camera_folds, fold_parts
+
+    k = 4
+    folds = camera_folds(synthetic, k=k, n_trials=300)
+    assert set(folds) == set(synthetic.location) and set(folds.values()) == set(range(k))
+    tested = []
+    for f in range(k):
+        parts = fold_parts(folds, f, k)
+        assert set(parts.values()) == set(SPLITS)
+        tested += [loc for loc, p in parts.items() if p == "test"]
+        part = synthetic.location.map(parts)
+        assert set(synthetic.label[part == "train"]) == set(synthetic.label)
+    assert sorted(tested) == sorted(folds)  # each camera tested exactly once
+
+
+def test_camera_folds_are_deterministic(synthetic):
+    from mammalcam.data.split import camera_folds
+
+    assert camera_folds(synthetic, k=3, seed=1, n_trials=100) == camera_folds(synthetic, k=3, seed=1, n_trials=100)

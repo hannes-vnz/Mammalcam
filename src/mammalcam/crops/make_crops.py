@@ -3,8 +3,11 @@
 Usage:
     python -m mammalcam.crops.make_crops [--threshold 0.2] [--size 256] [--workers 8]
 
-Boxes come from MegaDetector (LILA's precomputed v5a results). Each animal
-detection at or above the threshold becomes one crop, labelled like this:
+Boxes come from MegaDetector (LILA's precomputed v5a results). Every animal
+detection at or above the threshold on every image becomes one crop
+(data/crops/detections.csv): this is what the pipeline sees at test time.
+
+For training, a subset of these crops gets a label (data/crops/crops.csv):
 
 - image with one species: the detection gets that species. If the image
   also has complete ground-truth boxes, only detections that overlap one of
@@ -13,11 +16,12 @@ detection at or above the threshold becomes one crop, labelled like this:
   (source "image_label"), as it would be for any detector output.
 - image with several species: the species of the matching ground-truth box;
   detections without a match are dropped.
-- empty and car images: no crops (vehicles are handled by stage 1).
+- empty and car images: no training crops (vehicles are handled by stage 1).
 
 Crops are square, padded around the box, shifted inside the image where
 possible and resized so the longer side is at most ``--size`` pixels.
-Writes data/crops/images/*.jpg and data/crops/crops.csv.
+Crop files are named <image_id>_<rank>.jpg, rank = position of the
+detection by confidence. Writes data/crops/images/, detections.csv, crops.csv.
 """
 
 from __future__ import annotations
@@ -57,6 +61,11 @@ def square_box(bbox, width: int, height: int, pad: float = 0.1) -> tuple[int, in
     return left, top, right, bottom
 
 
+def animal_detections(dets: list, threshold: float) -> list[tuple[float, tuple]]:
+    """Animal detections at or above threshold as (confidence, box), most confident first."""
+    return sorted([(c, b) for cat, c, b in dets if cat == "animal" and c >= threshold], key=lambda d: -d[0])
+
+
 def label_detections(row, ann_boxes: list[tuple[str, tuple]], complete: bool, dets: list,
                      threshold: float = 0.2, iou_threshold: float = IOU_THRESHOLD) -> list[dict]:
     """Labelled crops for one image.
@@ -70,14 +79,13 @@ def label_detections(row, ann_boxes: list[tuple[str, tuple]], complete: bool, de
         return []
     out = []
     free = list(range(len(ann_boxes)))
-    animals = sorted([(c, b) for cat, c, b in dets if cat == "animal" and c >= threshold], key=lambda d: -d[0])
-    for conf, box in animals:
+    for rank, (conf, box) in enumerate(animal_detections(dets, threshold)):
         best_iou, best = max(((iou(box, ann_boxes[i][1]), i) for i in free), default=(0.0, None))
         if best is not None and best_iou >= iou_threshold:
             free.remove(best)
-            out.append({"label": ann_boxes[best][0], "conf": conf, "bbox": box, "source": "box_match"})
+            out.append({"rank": rank, "label": ann_boxes[best][0], "conf": conf, "bbox": box, "source": "box_match"})
         elif row.label != MULTI and not (complete and ann_boxes):
-            out.append({"label": row.label, "conf": conf, "bbox": box, "source": "image_label"})
+            out.append({"rank": rank, "label": row.label, "conf": conf, "bbox": box, "source": "image_label"})
     return out
 
 
@@ -97,8 +105,31 @@ def _crop_one(job: tuple) -> list[str]:
     return written
 
 
+def _drop_tiny(table: pd.DataFrame, meta: pd.DataFrame) -> pd.DataFrame:
+    """Drop detections too small to classify; size measured in the downloaded image."""
+    if table.empty:
+        return table
+    w = table.image_id.map(meta.width).values
+    h = table.image_id.map(meta.height).values
+    scale = (DOWNLOAD_MAX_SIDE / pd.Series(w).combine(pd.Series(h), max)).clip(upper=1).values
+    px = table.bbox.map(lambda b: b[2]).values * w * scale
+    py = table.bbox.map(lambda b: b[3]).values * h * scale
+    return table[(px >= MIN_SIDE_PX) & (py >= MIN_SIDE_PX)].reset_index(drop=True)
+
+
+def detection_table(images: pd.DataFrame, dets: dict, threshold: float) -> pd.DataFrame:
+    """Every usable animal detection on every image, without looking at labels or boxes."""
+    rows = [{"crop_file": f"{r.image_id}_{rank}.jpg", "image_id": r.image_id, "file_name": r.file_name,
+             "location": r.location, "seq_id": r.seq_id, "image_label": r.label, "rank": rank,
+             "conf": conf, "bbox": box}
+            for r in images.itertuples()
+            for rank, (conf, box) in enumerate(animal_detections(dets.get(r.file_name, []), threshold))]
+    columns = ["crop_file", "image_id", "file_name", "location", "seq_id", "image_label", "rank", "conf", "bbox"]
+    return _drop_tiny(pd.DataFrame(rows, columns=columns), images.set_index("image_id"))
+
+
 def build_crop_table(images: pd.DataFrame, ann: pd.DataFrame, dets: dict, threshold: float) -> pd.DataFrame:
-    """One row per crop with label, source, box and image metadata (no pixels touched)."""
+    """Training crops: one row per labelled detection (no pixels touched)."""
     meta = images.set_index("image_id")
     animal_ann = ann[(ann.category != EMPTY)]
     boxes, complete = {}, {}
@@ -111,18 +142,12 @@ def build_crop_table(images: pd.DataFrame, ann: pd.DataFrame, dets: dict, thresh
 
     rows = []
     for r in images.itertuples():
-        for k, c in enumerate(label_detections(r, boxes.get(r.image_id, []), complete.get(r.image_id, False),
-                                               dets.get(r.file_name, []), threshold)):
-            rows.append({"crop_file": f"{r.image_id}_{k}.jpg", "image_id": r.image_id, "file_name": r.file_name,
-                         "location": r.location, "seq_id": r.seq_id, "image_label": r.label, **c})
-    crops = pd.DataFrame(rows)
-    # tiny detections are not usable as classifier input; size measured in the downloaded image
-    w = crops.image_id.map(meta.width).values
-    h = crops.image_id.map(meta.height).values
-    scale = (DOWNLOAD_MAX_SIDE / pd.Series(w).combine(pd.Series(h), max)).clip(upper=1).values
-    px = crops.bbox.map(lambda b: b[2]).values * w * scale
-    py = crops.bbox.map(lambda b: b[3]).values * h * scale
-    return crops[(px >= MIN_SIDE_PX) & (py >= MIN_SIDE_PX)].reset_index(drop=True)
+        for c in label_detections(r, boxes.get(r.image_id, []), complete.get(r.image_id, False),
+                                  dets.get(r.file_name, []), threshold):
+            rows.append({"crop_file": f"{r.image_id}_{c['rank']}.jpg", "image_id": r.image_id,
+                         "file_name": r.file_name, "location": r.location, "seq_id": r.seq_id,
+                         "image_label": r.label, **c})
+    return _drop_tiny(pd.DataFrame(rows), meta)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -138,20 +163,30 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     images, ann = load_cct(args.ann_dir)
-    crops = build_crop_table(images, ann, load_detections(args.detections), args.threshold)
-    for name in ("location", "random_sequence", "random_image"):
-        split = pd.read_csv(args.splits / f"{name}.csv").set_index("image_id").split
-        crops[f"split_{name}"] = crops.image_id.map(split)
+    dets = load_detections(args.detections)
+    all_dets = detection_table(images, dets, args.threshold)
+    crops = build_crop_table(images, ann, dets, args.threshold)
+    if not set(crops.crop_file) <= set(all_dets.crop_file):
+        raise RuntimeError("training crops must be a subset of all detections")
+    for table in (all_dets, crops):
+        for name in ("location", "random_sequence", "random_image"):
+            split = pd.read_csv(args.splits / f"{name}.csv").set_index("image_id").split
+            table[f"split_{name}"] = table.image_id.map(split)
 
     img_dir = args.out / "images"
     img_dir.mkdir(parents=True, exist_ok=True)
     jobs = [(args.img_dir / f, list(zip(g.crop_file, g.bbox)), img_dir, args.size)
-            for f, g in crops.groupby("file_name")]
+            for f, g in all_dets.groupby("file_name")]
     with ProcessPoolExecutor(args.workers) as pool:
         n = sum(len(w) for w in pool.map(_crop_one, jobs, chunksize=64))
-    crops.drop(columns="file_name").assign(bbox=crops.bbox.map(lambda b: " ".join(f"{v:.4f}" for v in b))) \
-        .to_csv(args.out / "crops.csv", index=False)
-    print(f"{n} crops from {len(jobs)} images -> {args.out}")
+
+    def save(table, name):
+        table.drop(columns="file_name").assign(bbox=table.bbox.map(lambda b: " ".join(f"{v:.4f}" for v in b))) \
+            .to_csv(args.out / name, index=False)
+
+    save(all_dets, "detections.csv")
+    save(crops, "crops.csv")
+    print(f"{n} crops from {len(jobs)} images ({len(crops)} labelled for training) -> {args.out}")
 
 
 if __name__ == "__main__":

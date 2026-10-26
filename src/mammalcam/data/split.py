@@ -96,6 +96,43 @@ def location_split(
     return {int(k): v for k, v in sorted(best.items())}
 
 
+def camera_folds(images: pd.DataFrame, k: int = 5, seed: int = 0, n_trials: int = 2000) -> dict:
+    """Assign every camera to one of k groups for cross-validation: {location: fold}.
+
+    Groups get similar numbers of images, and in every round of
+    ``fold_parts`` (one group test, the next one validation) each class seen
+    at two or more cameras still has a camera in the training groups.
+    Deterministic for a given seed.
+    """
+    rng = np.random.default_rng(seed)
+    sizes = images.groupby("location").size()
+    single = images[images.label != MULTI]
+    class_locs = single.groupby("label").location.agg(set)
+    class_locs = class_locs[class_locs.map(len) >= 2]
+    best, best_score = None, np.inf
+    for _ in range(n_trials):
+        load = np.zeros(k)
+        assign = {}
+        for loc in rng.permutation(sizes.index):  # greedy: next camera to the smallest group
+            fold = int(np.argmin(load))
+            assign[int(loc)] = fold
+            load[fold] += sizes[loc]
+        stuck = sum(
+            {assign[loc] for loc in locs} <= {f, (f + 1) % k}  # only in this round's test and val groups
+            for f in range(k) for locs in class_locs
+        )
+        score = 100 * stuck + (load.max() - load.min()) / load.sum()
+        if score < best_score:
+            best, best_score = assign, score
+    return dict(sorted(best.items()))
+
+
+def fold_parts(folds: dict, test_fold: int, k: int) -> dict:
+    """{location: part} for one cross-validation round: test group, the next group as val, rest train."""
+    val_fold = (test_fold + 1) % k
+    return {loc: "test" if f == test_fold else "val" if f == val_fold else "train" for loc, f in folds.items()}
+
+
 def random_split(images: pd.DataFrame, counts: dict, by: str = "image", seed: int = 0) -> pd.Series:
     """Random split with (about) the given number of images per part.
 

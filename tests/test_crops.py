@@ -91,3 +91,19 @@ def test_crop_one_writes_resized_square(tmp_path):
     assert written == ["c0.jpg"]
     with Image.open(out / "c0.jpg") as im:
         assert max(im.size) == 128
+
+
+def test_detection_table_ranks_match_training_crops():
+    from mammalcam.crops.make_crops import build_crop_table, detection_table
+
+    images = pd.DataFrame([{"image_id": "a", "file_name": "a.jpg", "location": 1, "seq_id": "s",
+                            "label": "coyote", "width": 1000, "height": 1000}])
+    ann = pd.DataFrame([{"image_id": "a", "category": "coyote", "bbox": (500, 500, 200, 200)}])
+    dets = {"a.jpg": [("animal", 0.3, (0.1, 0.1, 0.2, 0.2)),      # rock, lower confidence
+                      ("animal", 0.9, (0.5, 0.5, 0.2, 0.2)),      # the coyote
+                      ("person", 0.8, (0.0, 0.0, 0.3, 0.3))]}
+    all_dets = detection_table(images, dets, 0.2)
+    train = build_crop_table(images, ann, dets, 0.2)
+    assert all_dets.crop_file.tolist() == ["a_0.jpg", "a_1.jpg"]  # both animals, ranked by confidence
+    assert train.crop_file.tolist() == ["a_0.jpg"]                # only the box-confirmed one
+    assert all_dets.set_index("crop_file").loc["a_0.jpg", "conf"] == 0.9
