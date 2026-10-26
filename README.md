@@ -55,7 +55,16 @@ The cameras for each part are chosen by a seeded search so that every class seen
 
 ## Results
 
-Pending.
+### Stage 1: MegaDetector on a 500-image sample
+
+MegaDetector v5a, pretrained, on a class-balanced sample (one image per burst, all 20 cameras). Full tables: [reports/02_megadetector_sample.md](reports/02_megadetector_sample.md).
+
+- **Boxes:** where every animal has an annotated box, MegaDetector finds 97 % of them at threshold 0.2 (precision 97 %, mean IoU 0.85).
+- **Image level:** it flags 87 % of the images labelled with an animal. But 50 of the 55 misses are frames without an annotated box. CCT labels whole bursts, so the last frame often shows the empty scene after the animal has left. On images with a box it misses 5 of 365.
+- **"Empty" images:** 8 of 32 get a detection. Looking at them, most contain an animal after all (a close-up, a tail, a skunk at the edge) or a person. These are label errors, not detector errors.
+- **Speed:** about 1 image per second on an M-series MacBook (MPS). The whole dataset would take about 16 hours locally.
+
+Caveat: MegaDetector was trained on data that includes Caltech Camera Traps, so these numbers are probably better than on cameras it has never seen.
 
 ## Limitations
 
