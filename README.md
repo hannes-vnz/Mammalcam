@@ -28,7 +28,30 @@ All animal classes in the dataset are classified. Mammals are the focus, and onl
 
 ## Data and licences
 
-To be filled in once the dataset is fixed. Datasets come from [LILA BC](https://lila.science) and are not part of this repository; download scripts are in `src/mammalcam/data/`.
+**[Caltech Camera Traps, CCT20 benchmark subset](https://lila.science/datasets/caltech-camera-traps)**, hosted by LILA BC. Licence: [Community Data License Agreement – Permissive 1.0](https://cdla.dev/permissive-1-0/). Images are not part of this repository; `python -m mammalcam.data.download cct20` fetches them (6.5 GB).
+
+> Beery, S., Van Horn, G., Perona, P. (2018). *Recognition in Terra Incognita.* ECCV 2018.
+
+57,864 images from 20 camera locations in the southwestern US, 15 classes plus "empty". Full overview: [reports/01_dataset.md](reports/01_dataset.md).
+
+What matters for this project:
+
+- **Heavy class imbalance.** Opossum alone is 24 % of the images; badger (22 images) and fox (8) are too rare to learn.
+- **Some classes exist at only two cameras** (car, deer, fox), so they cannot be in train, validation and test at the same time.
+- **Only 7 % empty images.** The benchmark was pre-filtered; real deployments are often 70 % empty or more. The empty filter is therefore not tested under realistic conditions here.
+- **Images come in bursts** of mostly three frames. Frames of one burst are near-duplicates.
+
+### Splits
+
+`python -m mammalcam.data.split` builds three splits with identical sizes (34,410 / 8,738 / 14,716 images):
+
+| Strategy | What is separated | Shared cameras | Shared bursts |
+|---|---|---|---|
+| `location` (used for all results) | whole cameras: 12 train, 3 val, 5 test | 0 | 0 |
+| `random_sequence` (comparison) | whole bursts | 20 | 0 |
+| `random_image` (comparison) | single images | 20 | 13,395 |
+
+The cameras for each part are chosen by a seeded search so that every class seen at two or more cameras appears in both train and test; the result is stored in [configs/splits_cct20.json](configs/splits_cct20.json).
 
 ## Results
 
