@@ -153,6 +153,8 @@ What this means and where the limits are:
 - SpeciesNet's errors are often too coarse rather than wrong: 10 % of its predictions are "animal" or a higher taxon, 3 % of all images are correct but coarser than the class.
 - Cost: SpeciesNet's classifier took 2 h 48 min for the test images on a MacBook (about 5 images/s), the own one about 30 min (about 28 crops/s). With MegaDetector in front, which both need and which runs at about 1 image/s, the full pipeline is only about 20 % slower with SpeciesNet.
 
+Fine-tuning the backbone on the crops, with the same camera cross-validation, is prepared in [notebooks/finetune_colab_kaggle.ipynb](notebooks/finetune_colab_kaggle.ipynb); results follow.
+
 For practical use, SpeciesNet is the better choice for these species. This project's own classifier is the vehicle for the method (detector crops, location-based evaluation, burst averaging), and the gap to SpeciesNet is the honest benchmark it has to be measured against.
 
 ## Limitations
@@ -172,6 +174,35 @@ pytest
 
 Plain `python3 -m venv .venv` and `pip install -e ".[detect,demo,dev]"` work as well.
 
+The pipeline, step by step (each step writes a report to `reports/`):
+
+```bash
+python -m mammalcam.data.download cct20        # 6.5 GB images + metadata
+python -m mammalcam.data.download cct-md       # LILA's MegaDetector results, 5 MB
+python -m mammalcam.data.split                 # camera split + random comparison splits
+python -m mammalcam.data.report
+python -m mammalcam.detect.megadetector --sample 500   # own MegaDetector run on a sample
+python -m mammalcam.detect.evaluate
+python -m mammalcam.crops.make_crops
+python -m mammalcam.crops.report
+python -m mammalcam.models.baseline            # full-image linear probe
+python -m mammalcam.models.classify            # crop linear probe, camera cross-validation
+python -m mammalcam.eval.examples              # figures in docs/examples/
+python -m mammalcam.eval.compare               # all models side by side
+```
+
+**Fine-tuning** needs a GPU: open [notebooks/finetune_colab_kaggle.ipynb](notebooks/finetune_colab_kaggle.ipynb) in Google Colab or Kaggle. It rebuilds data, splits and crops with the same scripts, checks that the camera groups match, fine-tunes with the same 5-fold camera cross-validation and resumes after a disconnect. Put the resulting `predictions.csv` into `data/predictions/finetune_test.csv` and rerun `python -m mammalcam.eval.compare`.
+
+**SpeciesNet** runs in its own environment (its dependencies clash with the main one):
+
+```bash
+uv venv --python 3.12 .venv-speciesnet
+uv pip install --python .venv-speciesnet/bin/python speciesnet
+python -m mammalcam.speciesnet.prepare
+sh src/mammalcam/speciesnet/run.sh             # about 3 hours on a MacBook
+python -m mammalcam.speciesnet.evaluate
+```
+
 ## Project structure
 
 ```
@@ -180,10 +211,13 @@ src/mammalcam/
   data/      # download, metadata parsing, location-based split
   detect/    # MegaDetector inference
   crops/     # crops from detections, label assignment
-  models/    # baseline and species classifier
-  eval/      # metrics, confusion matrix, error examples
+  models/    # embeddings, linear probes, fine-tuning
+  eval/      # metrics, example figures, model comparison
+  speciesnet/  # SpeciesNet input, run script and evaluation
   export/    # CSV output
-notebooks/   # exploration, MegaDetector sample, training notebook for Kaggle / Colab
+notebooks/   # fine-tuning notebook for Colab / Kaggle
+reports/     # generated reports and result JSONs
+docs/        # example figures for this README
 app/         # Gradio demo
 tests/       # tests for data preparation
 data/        # not tracked, see data/README.md
