@@ -40,14 +40,16 @@ Pending.
 
 ## Run it
 
-Requires Python 3.10 or newer.
+Requires Python 3.10 or newer (the project pins 3.12 in `.python-version`). With [uv](https://docs.astral.sh/uv/):
 
 ```bash
-python3 -m venv .venv
+uv venv --python 3.12 .venv
 source .venv/bin/activate
-pip install -e ".[detect,demo,dev]"
+uv pip install -e ".[detect,demo,dev]"
 pytest
 ```
+
+Plain `python3 -m venv .venv` and `pip install -e ".[detect,demo,dev]"` work as well.
 
 ## Project structure
 

@@ -17,7 +17,7 @@ Portfolio project: camera trap images → empty filter → MegaDetector boxes �
 
 ## Environment
 
-- MacBook Air (Apple Silicon). Project-local `.venv`, nothing global. Python ≥ 3.10 (system Python 3.9 is too old for current Gradio/PyTorch).
+- MacBook Air (Apple Silicon). Project-local `.venv` created with uv (Python 3.12, pinned in `.python-version`); install with `uv pip install`. System Python 3.9 is too old for current Gradio/PyTorch.
 - Local inference on MPS or CPU. Real fine-tuning runs in a notebook on Kaggle or Colab (free GPU).
 
 ## Mammalatlas link
