@@ -66,6 +66,16 @@ MegaDetector v5a, pretrained, on a class-balanced sample (one image per burst, a
 
 Caveat: MegaDetector was trained on data that includes Caltech Camera Traps, so these numbers are probably better than on cameras it has never seen.
 
+### Crops for the species classifier
+
+To avoid 16 hours of local inference, the crops use [LILA's precomputed MegaDetector v5a results](https://lila.science/megadetector-results-for-camera-trap-datasets/) for Caltech Camera Traps (`python -m mammalcam.data.download cct-md`, 5 MB). They agree with the own run on the 500-image sample: 98 % same animal / no-animal decision, matched boxes at mean IoU 0.97.
+
+`python -m mammalcam.crops.make_crops` turns every animal detection (confidence ≥ 0.2) into a padded square crop. Details: [reports/03_crops.md](reports/03_crops.md).
+
+- **47,099 crops** from 45,039 images. 95 % of the labels are confirmed by an annotated box; detections on images with complete boxes that match none of them (rocks, branches) are dropped.
+- **12 % of the animal images give no crop.** Most are burst frames after the animal has left; for rodents it is 33 %, because small animals are detected less often.
+- **Hard cases for the classifier:** rodents have 101 training crops but 417 test crops, dogs only 41 validation crops. Fox (1 training crop) and badger (16) are too rare to train on.
+
 ## Limitations
 
 Pending.
