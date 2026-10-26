@@ -12,6 +12,7 @@ Portfolio project: camera trap images → empty filter → MegaDetector boxes �
 - **Work in small, checkable steps:** dataset + location split → MegaDetector on a sample → crops → baseline → classifier → evaluation → demo. Stop for review after each.
 - **Tests** for data preparation: split without location overlap, crops, label mapping.
 - **Commits** in meaningful units with clear messages. Never push, the user pushes.
+- **No AI attribution** in commits or PRs: no `Co-Authored-By` trailer, no "Generated with" line. The repo is the user's portfolio.
 - **Honest results:** report limitations, rare species and failure cases in the README.
 - Demo example images only from the free dataset.
 
