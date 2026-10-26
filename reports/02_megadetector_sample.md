@@ -79,3 +79,15 @@ Only images whose animals all have a real box (no missing or full-frame boxes); 
 | rodent   |         21 |   18 |    2 |    3 | 85.7%    |
 | skunk    |         27 |   26 |    1 |    1 | 96.3%    |
 | squirrel |         24 |   22 |    1 |    2 | 91.7%    |
+
+## Comparison with LILA's precomputed MegaDetector v5a results (threshold 0.2)
+
+LILA ran the detector on the full-resolution originals, this run used the 1024 px download. The LILA results are used to crop all images.
+
+- images: 500
+- same animal / no animal decision: 0.980
+- mean abs. difference of max animal confidence: 0.024
+- boxes (this run): 477
+- boxes (reference): 495
+- matched boxes (IoU >= 0.5): 474
+- mean IoU of matched boxes: 0.966

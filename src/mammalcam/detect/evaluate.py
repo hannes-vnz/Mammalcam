@@ -24,6 +24,8 @@ import pandas as pd
 from mammalcam.data.cct import DEFAULT_ANN_DIR, EMPTY, load_cct
 from mammalcam.detect.megadetector import MD_CATEGORIES
 
+LILA_RESULTS = Path("data/raw/cct20/megadetector/caltech-camera-traps_mdv5a.0.0_results.json")
+
 THRESHOLDS = (0.05, 0.1, 0.2, 0.3, 0.5, 0.8)
 BOX_THRESHOLD = 0.2  # MegaDetector v5's typical threshold
 IOU_THRESHOLD = 0.5
@@ -169,7 +171,31 @@ def box_level(sample: pd.DataFrame, dets: dict, gt: dict, threshold: float = BOX
     return summary, per_label
 
 
-def build_report(sample: pd.DataFrame, dets: dict, gt: dict, model: str) -> str:
+def compare_runs(ours: dict, ref: dict, threshold: float = BOX_THRESHOLD) -> dict:
+    """Agreement between two detection runs on the files of ``ours``."""
+    agree, diffs, n_ours, n_ref, ious = 0, [], 0, 0, []
+    for f, d in ours.items():
+        r = ref[f]
+        mo = max((c for cat, c, _ in d if cat == "animal"), default=0.0)
+        mr = max((c for cat, c, _ in r if cat == "animal"), default=0.0)
+        agree += (mo >= threshold) == (mr >= threshold)
+        diffs.append(abs(mo - mr))
+        a = [box for _, c, box in d if c >= threshold]
+        b = [(c, box) for _, c, box in r if c >= threshold]
+        matched, _, _ = match(a, b)
+        n_ours, n_ref, ious = n_ours + len(a), n_ref + len(b), ious + matched
+    return {
+        "images": len(ours),
+        "same animal / no animal decision": agree / len(ours),
+        "mean abs. difference of max animal confidence": sum(diffs) / len(diffs),
+        "boxes (this run)": n_ours,
+        "boxes (reference)": n_ref,
+        "matched boxes (IoU >= 0.5)": len(ious),
+        "mean IoU of matched boxes": sum(ious) / len(ious) if ious else float("nan"),
+    }
+
+
+def build_report(sample: pd.DataFrame, dets: dict, gt: dict, model: str, ref: dict | None = None) -> str:
     summary, per_label = box_level(sample, dets, gt)
     lines = [
         "# MegaDetector on a CCT20 sample", "",
@@ -195,6 +221,13 @@ def build_report(sample: pd.DataFrame, dets: dict, gt: dict, model: str) -> str:
     ]
     lines += [f"- {k}: {v:.3f}" if isinstance(v, float) else f"- {k}: {v}" for k, v in summary.items()]
     lines += ["", per_label.to_markdown(), ""]
+    if ref is not None:
+        lines += [f"## Comparison with LILA's precomputed MegaDetector v5a results (threshold {BOX_THRESHOLD})", "",
+                  "LILA ran the detector on the full-resolution originals, this run used the 1024 px download. "
+                  "The LILA results are used to crop all images.", ""]
+        lines += [f"- {k}: {v:.3f}" if isinstance(v, float) else f"- {k}: {v}"
+                  for k, v in compare_runs(dets, ref).items()]
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -203,6 +236,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--ann-dir", type=Path, default=DEFAULT_ANN_DIR)
     parser.add_argument("--detections", type=Path, default=Path("data/detections/md_sample.json"))
     parser.add_argument("--out", type=Path, default=Path("reports/02_megadetector_sample.md"))
+    parser.add_argument("--reference", type=Path, default=LILA_RESULTS, help="other run to compare with (skipped if missing)")
     args = parser.parse_args(argv)
 
     images, ann = load_cct(args.ann_dir)
@@ -216,7 +250,8 @@ def main(argv: list[str] | None = None) -> None:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     gt = ground_truth(images, ann[ann.image_id.isin(sample.image_id)])
-    args.out.write_text(build_report(sample, dets, gt, Path(model).stem))
+    ref = load_detections(args.reference) if args.reference.exists() else None
+    args.out.write_text(build_report(sample, dets, gt, Path(model).stem, ref))
     print(f"wrote {args.out}")
 
 
