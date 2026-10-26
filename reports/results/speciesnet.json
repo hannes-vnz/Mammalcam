@@ -1,0 +1,30 @@
+{
+  "summary": {
+    "SpeciesNet v4.0.3a (geofence USA/CA)": {
+      "n": 51129.0,
+      "accuracy": 0.7678225664495687,
+      "macro_f1": 0.8254571694387477
+    },
+    "SpeciesNet + burst majority vote": {
+      "n": 51129.0,
+      "accuracy": 0.8944825832697686,
+      "macro_f1": 0.9063104832096643
+    },
+    "own: full image (baseline)": {
+      "n": 51129.0,
+      "accuracy": 0.4636898824541845,
+      "macro_f1": 0.3527290638479769
+    },
+    "own: MegaDetector crops": {
+      "n": 51129.0,
+      "accuracy": 0.7085802577793424,
+      "macro_f1": 0.658573560965817
+    },
+    "own: crops + burst average": {
+      "n": 51129.0,
+      "accuracy": 0.8163860040290246,
+      "macro_f1": 0.7355113643490174
+    }
+  },
+  "coarser_but_correct": 1545
+}

@@ -133,6 +133,28 @@ Mean ± standard deviation over the 5 folds.
 - **Rare and look-alike classes stay hard:** deer F1 0.26 (207 images from 2 cameras, mostly confused with coyote), rodent 0.45. Common species reach 0.82–0.91.
 - **Spread between cameras is large:** accuracy per camera ranges from 0.65 to 0.95 for crops + burst average.
 
+### Specialist vs. generalist: SpeciesNet
+
+Google's [SpeciesNet](https://github.com/google/cameratrapai) (v4.0.3a, Apache 2.0) on the same 51,129 test images and the same MegaDetector boxes, with its own ensemble and geofence (USA / California). Its 2,000+ labels are mapped to the 12 classes by taxonomy; anything coarser (e.g. "animal", "canine family") counts as wrong. Details: [reports/06_speciesnet.md](reports/06_speciesnet.md).
+
+| Model | Accuracy | Macro-F1 |
+|---|---|---|
+| own: crops | 0.71 | 0.66 |
+| own: crops + burst average | 0.82 | 0.74 |
+| SpeciesNet | 0.77 | 0.83 |
+| **SpeciesNet + burst majority vote** | **0.89** | **0.91** |
+
+**The generalist wins.** It is ahead by 6 points of accuracy per image and 8 points with burst averaging, and clearly more in macro-F1. Comparing single images with single images, it is better on every class and at every one of the 20 cameras. The gap is largest for the rare classes: deer F1 0.87 vs. 0.26, rodent 0.53 vs. 0.45. With 207 deer images from two cameras, the own model cannot learn what 65 million training images taught SpeciesNet. The comparison is fair on the detection side: both use the same boxes, and SpeciesNet's lower classification threshold (0.1 instead of 0.2) affects under 1 % of the images.
+
+What this means and where the limits are:
+
+- SpeciesNet's training data is not published per dataset. Caltech Camera Traps is public and may have been part of it, which would make its numbers optimistic.
+- The own model is only a linear probe on a frozen backbone. Fine-tuning (next step) should close part of the gap.
+- SpeciesNet's errors are often too coarse rather than wrong: 10 % of its predictions are "animal" or a higher taxon, 3 % of all images are correct but coarser than the class.
+- Cost: SpeciesNet's classifier took 2 h 48 min for the test images on a MacBook (about 5 images/s), the own one about 30 min (about 28 crops/s). With MegaDetector in front, which both need and which runs at about 1 image/s, the full pipeline is only about 20 % slower with SpeciesNet.
+
+For practical use, SpeciesNet is the better choice for these species. This project's own classifier is the vehicle for the method (detector crops, location-based evaluation, burst averaging), and the gap to SpeciesNet is the honest benchmark it has to be measured against.
+
 ## Limitations
 
 Pending.
