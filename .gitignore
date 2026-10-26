@@ -1,0 +1,28 @@
+# Data and model weights never go into the repo (download scripts only)
+data/*
+!data/README.md
+/models/
+/runs/
+/outputs/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets
+.env
+*.key
+kaggle.json
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
