@@ -25,6 +25,7 @@ All animal classes in the dataset are classified. Mammals are the focus, and onl
 - Comparison: the same model with a random split, to show how much accuracy would be overestimated.
 - Accuracy, macro-F1, confusion matrix, per-species results (including rare species), error examples.
 - Baseline: a classifier on full images without detector crops, to measure what stage 1 adds.
+- **Specialist vs. generalist:** the same test cameras run through Google's [SpeciesNet](https://github.com/google/cameratrapai), a public model trained on over 65 million camera trap images with more than 2,000 labels. Question: does a small classifier trained on these cameras beat a large general-purpose model on new cameras from the same region? SpeciesNet's labels are mapped to the classes used here, and it runs in its own virtual environment to keep its dependencies apart.
 
 ## Data and licences
 

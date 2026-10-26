@@ -9,7 +9,8 @@ Portfolio project: camera trap images → empty filter → MegaDetector boxes �
 - **No data in the repo.** Only download scripts. Before any download, state dataset, source, licence, size in GB and number of images, and wait for the user's OK.
 - **No keys or credentials in the repo** (.env, kaggle.json are gitignored).
 - **Open-source tools only.**
-- **Work in small, checkable steps:** dataset + location split → MegaDetector on a sample → crops → baseline → classifier → evaluation → demo. Stop for review after each.
+- **Work in small, checkable steps:** dataset + location split → MegaDetector on a sample → crops → baseline → classifier → evaluation (incl. SpeciesNet comparison) → demo. Stop for review after each.
+- **Fair end-to-end test:** the crop classifier is evaluated per image with MegaDetector boxes only (no ground-truth boxes), images without detection count as errors.
 - **Tests** for data preparation: split without location overlap, crops, label mapping.
 - **Commits** in meaningful units with clear messages. Never push, the user pushes.
 - **No AI attribution** in commits or PRs: no `Co-Authored-By` trailer, no "Generated with" line. The repo is the user's portfolio.
