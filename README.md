@@ -89,7 +89,27 @@ To avoid 16 hours of local inference, the crops use [LILA's precomputed MegaDete
 
 **A random split would overstate accuracy by about 32 points.** Most of the gap (28 points) comes from seeing the same cameras in training and test; near-identical burst frames add another 4. On a new camera the whole-image model fails badly: all 636 rodent test images come from camera 33, and 496 of them are classified as raccoon.
 
-The number also depends a lot on which cameras end up in the test set. Accuracy per test camera ranges from 0.34 to 0.87, and macro-F1 is 0.24 on the 3 validation cameras but 0.43 on the 5 test cameras. A single split of 20 cameras is not enough for a stable estimate, so the next results will use cross-validation over camera groups.
+The number also depends a lot on which cameras end up in the test set. Accuracy per test camera ranges from 0.34 to 0.87, and macro-F1 is 0.24 on the 3 validation cameras but 0.43 on the 5 test cameras. A single split of 20 cameras is not enough for a stable estimate, so the next results use cross-validation over camera groups.
+
+### Species classifier on MegaDetector crops
+
+Same frozen backbone and the same kind of classifier as the baseline. The only difference is the input: MegaDetector crops instead of the whole image. Trained on the labelled crops; tested end to end on every MegaDetector detection of the test images, with no ground-truth boxes involved. An image without any detection (11 % of test images) counts as wrong. Optionally the predictions are averaged over each burst. Details: [reports/05_crop_classifier.md](reports/05_crop_classifier.md).
+
+**Main result: 5-fold cross-validation over camera groups.** Every camera is in the test group exactly once (51,129 test images in total).
+
+| Model | Accuracy | Macro-F1 |
+|---|---|---|
+| full image (baseline) | 0.46 ± 0.05 | 0.32 ± 0.06 |
+| full image + burst average | 0.49 ± 0.05 | 0.33 ± 0.06 |
+| MegaDetector crops | 0.71 ± 0.07 | 0.61 ± 0.06 |
+| **MegaDetector crops + burst average** | **0.82 ± 0.05** | **0.69 ± 0.05** |
+
+Mean ± standard deviation over the 5 folds.
+
+- **Stage 1 pays off clearly:** cropping raises accuracy on unseen cameras from 0.46 to 0.71, and the crop model is better than the baseline at every one of the 20 cameras. Averaging over a burst adds another 11 points, partly because it fills in frames where the animal has left or is hard to see.
+- **Crops make the model less dependent on the camera.** On the single split, a random split overstates the full-image model by 32 points (0.49 → 0.81) but the crop model by only 10 points (0.70 → 0.80). Without the background there is less to memorise.
+- **Rare and look-alike classes stay hard:** deer F1 0.26 (207 images from 2 cameras, mostly confused with coyote), rodent 0.45. Common species reach 0.82–0.91.
+- **Spread between cameras is large:** accuracy per camera ranges from 0.65 to 0.95 for crops + burst average.
 
 ## Limitations
 
