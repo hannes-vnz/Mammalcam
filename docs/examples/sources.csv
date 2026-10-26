@@ -1,0 +1,16 @@
+figure,file_name,camera,label,rights_holder
+correct,59d0e422-23d2-11e8-a6a3-ec086b02610b.jpg,43,coyote,Justin Brown
+correct,59bfdd4e-23d2-11e8-a6a3-ec086b02610b.jpg,46,bobcat,Justin Brown
+correct,58d7a18f-23d2-11e8-a6a3-ec086b02610b.jpg,100,raccoon,Justin Brown
+correct,592c4f7e-23d2-11e8-a6a3-ec086b02610b.jpg,120,skunk,Erin Boydston
+correct,58d15eab-23d2-11e8-a6a3-ec086b02610b.jpg,115,rabbit,Justin Brown
+correct,598624c2-23d2-11e8-a6a3-ec086b02610b.jpg,33,squirrel,Justin Brown
+full_vs_crops,5971fb1a-23d2-11e8-a6a3-ec086b02610b.jpg,33,rodent,Justin Brown
+full_vs_crops,58b9d678-23d2-11e8-a6a3-ec086b02610b.jpg,88,cat,Justin Brown
+full_vs_crops,589e6641-23d2-11e8-a6a3-ec086b02610b.jpg,125,bobcat,Justin Brown
+burst,59fc7e4d-23d2-11e8-a6a3-ec086b02610b.jpg,61,rabbit,Justin Brown
+burst,59adfe95-23d2-11e8-a6a3-ec086b02610b.jpg,61,rabbit,Justin Brown
+burst,59f79871-23d2-11e8-a6a3-ec086b02610b.jpg,61,rabbit,Justin Brown
+failures,59b4848a-23d2-11e8-a6a3-ec086b02610b.jpg,61,deer,Justin Brown
+failures,599d7d40-23d2-11e8-a6a3-ec086b02610b.jpg,61,rodent,Justin Brown
+failures,59d418cb-23d2-11e8-a6a3-ec086b02610b.jpg,46,raccoon,Justin Brown
