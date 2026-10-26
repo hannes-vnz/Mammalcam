@@ -1,0 +1,23 @@
+{
+  "classes": [
+    "bird",
+    "bobcat",
+    "cat",
+    "coyote",
+    "deer",
+    "dog",
+    "opossum",
+    "rabbit",
+    "raccoon",
+    "rodent",
+    "skunk",
+    "squirrel"
+  ],
+  "excluded": {
+    "badger": "16 training crops, too rare to learn",
+    "fox": "1 training crop, too rare to learn",
+    "empty": "handled by stage 1 (MegaDetector)",
+    "car": "handled by stage 1 (MegaDetector vehicle class)",
+    "multi": "more than one species on the image, no single image label"
+  }
+}
